@@ -241,7 +241,8 @@
                                                  (key-bindings {:!menu-state !menu-state
                                                                 :comment c
                                                                 :opts opts})]}))]
-    (hooks/use-effect #(when editor (.. editor -commands focus)) [editor])
+    (hooks/use-effect #(when (and editor (or (:body c) !parent-state)) ;; reply or edit
+                         (.. editor -commands focus)) [editor])
     (when editor
       [:div {:data-arb-editor-container true}
        [:div {:data-arb-editor-wrapper true}
@@ -317,10 +318,11 @@
            (cond-> comments
              reply (conj reply)))]))
 
-(defn render-tree [{:as opts :keys [pertains-to comments]}]
+(defn render-tree [{:as opts :keys [pertains-to]} comments]
   [:div
    (into [:<>]
          (map (fn [child-comment]
                 ^{:key (:id child-comment)}
                 [render-comment opts (assoc child-comment :pertains-to pertains-to)]))
+         ;; auto open editable comment on render (make customizable)
          (conj comments (new-comment opts)))])
