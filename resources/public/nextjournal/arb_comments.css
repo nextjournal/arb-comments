@@ -46,39 +46,6 @@
       color: var(--violet11);
 }
 
-/* ArbLinks */
-[data-arb-link-inline],
-[data-arb-link-mention] {
-  position: relative;
-  display: inline-block;
-}
-[data-arb-link-inline-label],
-[data-arb-link-mention] {
-  background: var(--violet5);
-  padding: 2px 8px;
-  border-radius: 20px;
-  color: var(--violet11);
-}
-[data-arb-link-inline-hover] {
-  transform: translateX(-50%);
-  position: absolute;
-  left: 50%;
-  bottom: 30px;
-  background: var(--violet3);
-  width: 200px;
-  border-radius: 5px;
-  border: 1px solid var(--violet5);
-  box-shadow: 0 2px 4px rgba(0,0,0,.1);
-  padding: 3px 10px;
-  font-size: 12px;
-  display: none;
-}
-[data-arb-link-inline]:hover [data-arb-link-inline-label] {
-  background: var(--violet6);
-}
-[data-arb-link-inline]:hover [data-arb-link-inline-hover] {
-  display: block;
-}
 [data-arb-comment-content], .ProseMirror {
   h1, h2, h3, h4, h5, h6 {
     font-weight: bold;
