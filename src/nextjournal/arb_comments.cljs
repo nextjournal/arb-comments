@@ -3,7 +3,7 @@
             ["react" :as react]
             ["react-dom/client" :as react-client]
             ["@radix-ui/react-dropdown-menu" :as DropdownMenu]
-            ["@radix-ui/react-icons" :as Icons :refer [StrikethroughIcon FontBoldIcon FontItalicIcon Link2Icon CodeIcon QuoteIcon ListBulletIcon]]
+            ["@radix-ui/react-icons" :as Icons :refer [StrikethroughIcon FontBoldIcon FontItalicIcon Link2Icon CodeIcon QuoteIcon ListBulletIcon CheckboxIcon]]
             ["@radix-ui/react-toggle" :as Toggle]
             ["@radix-ui/react-popover" :as Popover]
             ["@tiptap/core" :refer [Node Extension]]
@@ -194,7 +194,8 @@
    (into [:div {:type "multiple" :data-arb-editor-menu-group true}]
          (map (fn [item] [menu-item-toggle (merge opts item)]))
          [{:name "blockquote" :icon QuoteIcon :cmd #(.. editor chain focus toggleBlockquote run)}
-          {:name "bulletList" :icon ListBulletIcon :cmd #(.. editor chain focus toggleBulletList run)}])])
+          {:name "bulletList" :icon ListBulletIcon :cmd #(.. editor chain focus toggleBulletList run)}
+          {:name "todoList" :icon CheckboxIcon :cmd #(.. editor chain focus toggleTaskList run)}])])
 
 (defn get-link-ids [^js editor]
   (let [ids (atom #{})]
