@@ -172,7 +172,7 @@
                    :onPressedChange (or cmd #(.. editor chain focus (toggleMark name) run))}
    [:> icon]])
 
-(defn editor-menu [{:as opts :keys [^js editor is-active? !state]}]
+(defn editor-menu [{:as opts :keys [^js editor is-active? !state !arb-link-dropdown-state]}]
   [:div {:data-arb-editor-menu true}
    (into [:div {:type "multiple" :data-arb-editor-menu-group true}]
          (map (fn [item] [menu-item-toggle (merge opts item)]))
@@ -189,7 +189,18 @@
                        :data-state (if (is-active? "link") "on" "off")}
        [:> Link2Icon]]]
      [:> Popover/Portal
-      [link-editor editor !state]]]]
+      [link-editor editor !state]]]
+    [:button {:data-arb-editor-menu-item true
+              :on-click #(let [selection (.. editor -state -selection)
+                               current-pos (.-from selection)]
+                           (.. editor -commands focus)
+                           (swap! !arb-link-dropdown-state assoc
+                                  :open? true
+                                  :props #js {:clientRect (fn [] (.. editor -view (coordsAtPos current-pos)))
+                                              :command (fn [cmd-props]
+                                                         (insert-link-command #js {:range selection
+                                                                                   :editor editor
+                                                                                   :props cmd-props}))}))} "@"]]
    [:div {:data-arb-editor-menu-separator true}]
    (into [:div {:type "multiple" :data-arb-editor-menu-group true}]
          (map (fn [item] [menu-item-toggle (merge opts item)]))
@@ -249,6 +260,7 @@
        [:div {:data-arb-editor-wrapper true}
         [editor-menu {:editor editor
                       :!state !menu-state
+                      :!arb-link-dropdown-state !arb-link-dropdown-state
                       :is-active? (fn [what] (.isActive editor what))}] ;; WHY: do we really need this clojure for the active state to be reactive?
         [:> EditorContent {:editor editor}]
         (when (:open? @!arb-link-dropdown-state)
