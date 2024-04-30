@@ -1,0 +1,8 @@
+{:paths ["src" "resources"]
+ :deps {com.datomic/peer {:mvn/version "1.0.6733" :exclusions [org.slf4j/slf4j-nop]}
+        hiccup/hiccup {:mvn/version "2.0.0-RC3"}
+        org.clojure/clojure {:mvn/version "1.12.0-alpha8"}
+        org.clojure/data.json {:mvn/version "2.5.0"}
+        ring/ring-core {:mvn/version "1.12.0"}
+        applied-science/js-interop {:mvn/version "0.4.2"}
+        reagent/reagent {:mvn/version "1.2.0"}}}
