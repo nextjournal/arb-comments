@@ -93,7 +93,7 @@
                           lookup-ref-fn))
                remove)
          (into (comp (map lookup-ref-fn)
-                     (map (partial d/entity (d/db *conn*)))
+                     (map (partial d/entity db))
                      (filter (partial exclusively-owns-link? comment))
                      (map (fn [l] [:db/retractEntity (:db/id l)])))
 
