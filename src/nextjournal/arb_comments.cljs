@@ -33,11 +33,12 @@
 (declare render-link)
 
 (defn insert-link-command [^js command-props]
-  (let [{:keys [^js editor range props]} (j/lookup command-props)
+  (let [{:keys [^js editor ^js range props]} (j/lookup command-props)
         node-after (.. editor -view -state -selection -$to -nodeAfter)
         override-space (some-> node-after .-text (.startsWith " "))]
     (.. editor chain focus
-        (insertContentAt (if override-space (j/update! range :to inc) range)
+        (insertContentAt #js {:from (.-from range)
+                              :to (cond-> (.-to range) override-space inc)}
                          (j/lit [{:type "ArbLink"
                                   :attrs props}
                                  {:type "text"
