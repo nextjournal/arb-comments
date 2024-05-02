@@ -47,7 +47,7 @@
 
    {:db/ident :arb.comment.link/type
     :db/doc "Holds the link type"
-    :db/valueType :db.type/keyword
+    :db/valueType :db.type/ref
     :db/cardinality :db.cardinality/one}])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
