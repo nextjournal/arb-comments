@@ -3,7 +3,7 @@
             ["react" :as react]
             ["react-dom/client" :as react-client]
             ["@radix-ui/react-dropdown-menu" :as DropdownMenu]
-            ["@radix-ui/react-icons" :as Icons :refer [StrikethroughIcon FontBoldIcon FontItalicIcon Link2Icon CodeIcon QuoteIcon ListBulletIcon CheckboxIcon]]
+            ["@radix-ui/react-icons" :as Icons :refer [StrikethroughIcon FontBoldIcon FontItalicIcon Link2Icon CodeIcon QuoteIcon ListBulletIcon CheckboxIcon Pencil2Icon TrashIcon CheckIcon ChatBubbleIcon]]
             ["@radix-ui/react-toggle" :as Toggle]
             ["@radix-ui/react-popover" :as Popover]
             ["@tiptap/core" :refer [Node Extension]]
@@ -24,11 +24,6 @@
 (r/set-default-compiler! (r/create-compiler {:function-components true}))
 
 (defonce !link-data-store (atom {}))
-
-(defn handle-edn-response [r]
-  (if (.-ok r)
-    (.then (.text r) (fn [edn] (edn/read-string edn)))
-    (.. r text (then (fn [e] (throw (js/Error. (str e))))))))
 
 (declare render-link)
 
@@ -243,7 +238,7 @@
                        "Mod-Enter" (fn [cmd-opts]
                                      (save-comment-body+links-command! opts comment (.-editor cmd-opts)))})}))
 
-(defn render-editor [{:as opts :keys [!state !parent-state]} {:as c :keys [id body]}]
+(defn render-editor [{:as opts :keys [!state !parent-state button]} {:as c :keys [id body]}]
   (let [!arb-link-dropdown-state (hooks/use-state {})
         !menu-state (hooks/use-state {:link-editor-open? false})
         editor (useEditor (clj->js {:content body
@@ -266,12 +261,20 @@
         [:> EditorContent {:editor editor}]
         (when (:open? @!arb-link-dropdown-state)
           [arb-link-dropdown-menu opts editor !arb-link-dropdown-state])]
-       [:div {:data-arb-comment-actions true}
-        [:button {:on-click #(save-comment-body+links-command! opts c editor)} "save"]
+       [:div.flex.justify-end.gap-2.py-3
+        {:data-arb-new-comment-actions true}
         (when (or (:body c) !parent-state)
-          [:button {:on-click #(if (:body c)
-                                 (swap! !state assoc :editing? false)
-                                 (swap! !parent-state dissoc :reply))} "cancel"])]])))
+          [button {:variant :white
+                   :on-click #(if (:body c)
+                                (swap! !state assoc :editing? false)
+                                (swap! !parent-state dissoc :reply))}
+           "Cancel"])
+        (let [can-save? (not-empty (.. editor -state -doc -textContent))]
+          [button {:variant (if can-save? :primary :white)
+                   :disabled? (not can-save?)
+                   :on-click #(save-comment-body+links-command! opts c editor)}
+           [:> CheckIcon]
+           "Save"])]])))
 
 (defmulti render-arb-link :type)
 
@@ -301,16 +304,40 @@
    :editing? true
    :author author})
 
-(defn render-comment [{:as opts :keys [format-datetime on-delete lookup-attribute]}
+(defn render-comment [{:as opts :keys [format-datetime on-delete lookup-attribute link can-add? can-edit? can-delete?]
+                       :or {can-edit? (constantly true)
+                            can-delete? (constantly true)
+                            can-add? true}}
                       {:as c :keys [author comments created-at editing? body id]}]
   (assert lookup-attribute)
   (let [!state (hooks/use-state {:editing? editing?})
         {:keys [editing? reply]} @!state]
     [:div {:data-arb-comment true}
-     [:div {:data-arb-comment-meta true}
-      [:div {:data-arb-comment-author true} [:a {:href (:url author)} (:name author)]]
-      (when created-at
-        [:div {:data-arb-comment-date true} (cond-> created-at format-datetime format-datetime)])]
+     [:div.flex.justify-between {:data-arb-comment-meta true}
+      [:div
+       (when created-at
+         [:span {:data-arb-comment-date true}
+          (cond-> created-at format-datetime format-datetime)
+          " • "])
+       [:span {:data-arb-comment-author true}
+        [:a {:href (:url author)} (:name author)]]]
+
+      (when-not editing?
+        [:div.flex.gap-4
+         {:data-arb-comment-actions true
+          :class "text-[13px] opacity-70"}
+         (when (can-delete? c)
+           [link {:variant :destructive-hover
+                  :on-click #(on-delete c)}
+            "Delete"])
+         (when (can-edit? c)
+           [link {:variant :secondary
+                  :on-click #(swap! !state update :editing? not)}
+            "Edit"])
+         (when can-add?
+           [link {:variant :primary-hover
+                  :on-click #(swap! !state assoc :reply (new-comment opts))}
+            "Reply"])])]
      (if editing?
        [render-editor (assoc opts :!state !state) c]
        [:<>
@@ -318,11 +345,7 @@
          (when body
            (parse body #js {:replace (fn [^js dom-node]
                                        (when-let [id (j/get-in dom-node [:attribs "data-arb-link-id"])]
-                                         (r/as-element [render-link opts {:id id}])))}))]
-        [:div {:data-arb-comment-actions true}
-         [:button {:on-click #(on-delete c)} "delete"]
-         [:button {:on-click #(swap! !state update :editing? not)} "edit"]
-         [:button {:on-click #(swap! !state assoc :reply (new-comment opts))} "reply"]]])
+                                         (r/as-element [render-link opts {:id id}])))}))]])
      (into [:<>]
            (map (fn [child-comment]
                   ^{:key (str (:id child-comment) "-" (:editing? child-comment))}
@@ -332,11 +355,14 @@
            (cond-> comments
              reply (conj reply)))]))
 
-(defn render-tree [{:as opts :keys [pertains-to]} comments]
-  [:div
-   (into [:<>]
-         (map (fn [child-comment]
-                ^{:key (:id child-comment)}
-                [render-comment opts (assoc child-comment :pertains-to pertains-to)]))
-         ;; auto open editable comment on render (make customizable)
-         (conj comments (new-comment opts)))])
+(defn render-tree [{:as opts :keys [pertains-to can-add?]} comments]
+  (let [opts (merge {:button (partial vector :button)
+                     :link (partial vector :button)}
+                    opts)]
+    [:div
+     (into [:<>]
+           (map (fn [child-comment]
+                  ^{:key (:id child-comment)}
+                  [render-comment opts (assoc child-comment :pertains-to pertains-to)]))
+           ;; auto open editable comment on render (make customizable)
+           (conj comments (when can-add? (new-comment opts))))]))
