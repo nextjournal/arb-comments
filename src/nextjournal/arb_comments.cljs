@@ -3,7 +3,7 @@
             ["react" :as react]
             ["react-dom/client" :as react-client]
             ["@radix-ui/react-dropdown-menu" :as DropdownMenu]
-            ["@radix-ui/react-icons" :as Icons :refer [StrikethroughIcon FontBoldIcon FontItalicIcon Link2Icon CodeIcon QuoteIcon ListBulletIcon CheckboxIcon Pencil2Icon TrashIcon CheckIcon ChatBubbleIcon]]
+            ["@radix-ui/react-icons" :as Icons :refer [StrikethroughIcon FontBoldIcon FontItalicIcon Link2Icon CodeIcon QuoteIcon ListBulletIcon CheckboxIcon CheckIcon CheckIcon]]
             ["@radix-ui/react-toggle" :as Toggle]
             ["@radix-ui/react-popover" :as Popover]
             ["@tiptap/core" :refer [Node Extension]]
@@ -109,7 +109,7 @@
          (.. (fetch-link-suggestions type)
              (then (fn [suggestions] (swap! !state assoc :suggestions suggestions)))
              (catch (fn [e] (js/console.error e)))))) [type])
-    (when (or types suggestions)
+    (when (and rect (or types suggestions))
       [:> DropdownMenu/Root {:default-open true
                              :open open?
                              :on-open-change (fn [open?]
@@ -139,7 +139,7 @@
                  types))
          [:> DropdownMenu/Arrow {:data-dropdown-menu-arrow true}]]]])))
 
-(defn link-editor [editor !menu-state]
+(defn link-editor [{:keys [editor !menu-state button]}]
   (let [focus-editor! #(js/setTimeout (fn [] (.. editor -commands focus))) ;; need to be deferred in event queue to avoid race with popover focus
         close-popover! #(do (swap! !menu-state assoc :link-editor-open? false)
                             (focus-editor!))
@@ -153,14 +153,18 @@
                          :on-interact-outside #(focus-editor!)
                          :on-escape-key-down #(focus-editor!)}
      [:> Popover/Arrow {:data-arb-editor-menu-link-href-editor-arrow true}]
-     [:input {:type "text"
-              :default-value (not-empty (.. editor (getAttributes "link") -href))
-              :on-change #(swap! !menu-state assoc :href (.. ^js % -target -value))}]
-     [:button {:data-arb-editor-menu-link-href-confirm true
-               :on-click #(set-href!)} "Ok"]
-     [:button {:data-arb-editor-menu-link-href-cancel true
+     [:div {:data-arb-editor-menu-link-href-editor-inner true}
+      [:input {:type "text"
+               :default-value (not-empty (.. editor (getAttributes "link") -href))
+               :on-change #(swap! !menu-state assoc :href (.. ^js % -target -value))}]
+      [button {:variant :white
+               :data-arb-editor-menu-link-href-cancel true
                :on-click #(do (.. editor chain (extendMarkRange "link") unsetLink run)
-                              (close-popover!))} "Unlink"]]))
+                              (close-popover!))} "Unlink"]
+      [button {:variant :primary
+               :data-arb-editor-menu-link-href-confirm true
+               :on-click #(set-href!)}
+       [:> CheckIcon] "OK"]]]))
 
 (defn menu-item-toggle [{:keys [name cmd icon editor is-active?]}]
   [:> Toggle/Root {:data-arb-editor-menu-item true
@@ -185,7 +189,7 @@
                        :data-state (if (is-active? "link") "on" "off")}
        [:> Link2Icon]]]
      [:> Popover/Portal
-      [link-editor editor !state]]]
+      [link-editor opts]]]
     [:button {:data-arb-editor-menu-item true
               :on-click #(let [selection (.. editor -state -selection)
                                current-pos (.-from selection)]
@@ -254,27 +258,28 @@
     (when editor
       [:div {:data-arb-editor-container true}
        [:div {:data-arb-editor-wrapper true}
-        [editor-menu {:editor editor
-                      :!state !menu-state
-                      :!arb-link-dropdown-state !arb-link-dropdown-state
-                      :is-active? (fn [what] (.isActive editor what))}] ;; WHY: do we really need this clojure for the active state to be reactive?
-        [:> EditorContent {:editor editor}]
+        [editor-menu (merge opts
+                            {:editor editor
+                             :!menu-state !menu-state
+                             :!arb-link-dropdown-state !arb-link-dropdown-state
+                             :is-active? (fn [what] (.isActive editor what))})] ;; WHY: do we really need this clojure for the active state to be reactive?
+        [:div {:data-arb-editor-content true}
+         [:> EditorContent {:editor editor}]]
         (when (:open? @!arb-link-dropdown-state)
           [arb-link-dropdown-menu opts editor !arb-link-dropdown-state])]
-       [:div.flex.justify-end.gap-2.py-3
-        {:data-arb-new-comment-actions true}
-        (when (or (:body c) !parent-state)
-          [button {:variant :white
-                   :on-click #(if (:body c)
-                                (swap! !state assoc :editing? false)
-                                (swap! !parent-state dissoc :reply))}
-           "Cancel"])
+       [:div {:data-arb-new-comment-actions true}
         (let [can-save? (not-empty (.. editor -state -doc -textContent))]
           [button {:variant (if can-save? :primary :white)
                    :disabled? (not can-save?)
                    :on-click #(save-comment-body+links-command! opts c editor)}
            [:> CheckIcon]
-           "Save"])]])))
+           "Save"])
+        (when (or (:body c) !parent-state)
+          [button {:variant :white
+                   :on-click #(if (:body c)
+                                (swap! !state assoc :editing? false)
+                                (swap! !parent-state dissoc :reply))}
+           "Cancel"])]])))
 
 (defmulti render-arb-link :type)
 
@@ -359,7 +364,7 @@
   (let [opts (merge {:button (partial vector :button)
                      :link (partial vector :button)}
                     opts)]
-    [:div
+    [:div {:data-arb-comments true}
      (into [:<>]
            (map (fn [child-comment]
                   ^{:key (:id child-comment)}
