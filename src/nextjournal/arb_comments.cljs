@@ -318,39 +318,40 @@
   (let [!state (hooks/use-state {:editing? editing?})
         {:keys [editing? reply]} @!state]
     [:div {:data-arb-comment true}
-     [:div.flex.justify-between {:data-arb-comment-meta true}
-      [:div
-       (when created-at
-         [:span {:data-arb-comment-date true}
-          (cond-> created-at format-datetime format-datetime)
-          " • "])
-       [:span {:data-arb-comment-author true}
-        [:a {:href (:url author)} (:name author)]]]
+     [:div {:data-arb-comment-main true}
+      [:div.flex.justify-between {:data-arb-comment-meta true}
+       [:div
+        (when created-at
+          [:span {:data-arb-comment-date true}
+           (cond-> created-at format-datetime format-datetime)
+           " • "])
+        [:span {:data-arb-comment-author true}
+         [:a {:href (:url author)} (:name author)]]]
 
-      (when-not editing?
-        [:div.flex.gap-4
-         {:data-arb-comment-actions true
-          :class "text-[13px] opacity-70"}
-         (when (can-delete? c)
-           [link {:variant :destructive-hover
-                  :on-click #(on-delete c)}
-            "Delete"])
-         (when (can-edit? c)
-           [link {:variant :secondary
-                  :on-click #(swap! !state update :editing? not)}
-            "Edit"])
-         (when can-add?
-           [link {:variant :primary-hover
-                  :on-click #(swap! !state assoc :reply (new-comment opts))}
-            "Reply"])])]
-     (if editing?
-       [render-editor (assoc opts :!state !state) c]
-       [:<>
-        [:div {:data-arb-comment-content true}
-         (when body
-           (parse body #js {:replace (fn [^js dom-node]
-                                       (when-let [id (j/get-in dom-node [:attribs "data-arb-link-id"])]
-                                         (r/as-element [render-link opts {:id id}])))}))]])
+       (when-not editing?
+         [:div.flex.gap-4
+          {:data-arb-comment-actions true
+           :class "text-[13px] opacity-70"}
+          (when (can-delete? c)
+            [link {:variant :destructive-hover
+                   :on-click #(on-delete c)}
+             "Delete"])
+          (when (can-edit? c)
+            [link {:variant :secondary
+                   :on-click #(swap! !state update :editing? not)}
+             "Edit"])
+          (when can-add?
+            [link {:variant :primary-hover
+                   :on-click #(swap! !state assoc :reply (new-comment opts))}
+             "Reply"])])]
+      (if editing?
+        [render-editor (assoc opts :!state !state) c]
+        [:<>
+         [:div {:data-arb-comment-content true}
+          (when body
+            (parse body #js {:replace (fn [^js dom-node]
+                                        (when-let [id (j/get-in dom-node [:attribs "data-arb-link-id"])]
+                                          (r/as-element [render-link opts {:id id}])))}))]])]
      (into [:<>]
            (map (fn [child-comment]
                   ^{:key (str (:id child-comment) "-" (:editing? child-comment))}

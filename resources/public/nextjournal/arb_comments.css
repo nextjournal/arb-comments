@@ -15,7 +15,7 @@
 [data-arb-comment] {
   display: block;
   /* border-bottom: 1px solid var(--gray5); */
-  padding: 0 0 0.6rem 0.3rem;
+  padding: 0.3rem 0 0.6rem 0.3rem;
 }
 
 [data-arb-comment] [data-arb-comment] {
@@ -48,7 +48,14 @@
 [data-arb-comment-rendered] {
   color: var(--gray11);
 }
+
+
+[data-arb-comment-main]:hover [data-arb-comment-actions] {
+  visibility: visible;
+}
+
 [data-arb-comment-actions] {
+  visibility: hidden;
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -247,9 +254,10 @@ ul[data-type='taskList'] {
 ul[data-type='taskList'] li {
   /* FIXME */
   display: flex;
+  margin: 0.25rem 0;
 }
 ul[data-type='taskList'] li p {
-  margin-top: 0.35rem;
+  margin-top: 0;
   margin-bottom: 0;
 }
 ul[data-type='taskList'] li input[type="checkbox"] {
@@ -257,7 +265,7 @@ ul[data-type='taskList'] li input[type="checkbox"] {
   width: 18px;
   height: 18px;
   border-radius: 0.2rem;
-  border: 1px solid var(--gray5);
+  border: 1px solid var(--gray9);
   position: relative;
   margin-right: 0.5rem;
   margin-left: -1.5rem;
