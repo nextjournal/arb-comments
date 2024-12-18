@@ -309,10 +309,10 @@
    :editing? true
    :author author})
 
-(defn render-comment [{:as opts :keys [format-datetime on-delete lookup-attribute link can-add? can-edit? can-delete?]
+(defn render-comment [{:as opts :keys [format-datetime on-delete lookup-attribute link can-post? can-edit? can-delete?]
                        :or {can-edit? (constantly true)
                             can-delete? (constantly true)
-                            can-add? true}}
+                            can-post? true}}
                       {:as c :keys [author comments created-at editing? body id]}]
   (assert lookup-attribute)
   (let [!state (hooks/use-state {:editing? editing?})
@@ -340,7 +340,7 @@
             [link {:variant :secondary
                    :on-click #(swap! !state update :editing? not)}
              "Edit"])
-          (when can-add?
+          (when can-post?
             [link {:variant :primary-hover
                    :on-click #(swap! !state assoc :reply (new-comment opts))}
              "Reply"])])]
@@ -365,7 +365,7 @@
            (cond-> comments
              reply (conj reply)))]))
 
-(defn render-tree [{:as opts :keys [pertains-to can-add?]} comments]
+(defn render-tree [{:as opts :keys [pertains-to can-post?]} comments]
   (let [opts (merge {:button (partial vector :button)
                      :link (partial vector :button)}
                     opts)]
@@ -375,4 +375,4 @@
                   ^{:key (:id child-comment)}
                   [render-comment opts (assoc child-comment :pertains-to pertains-to)]))
            ;; auto open editable comment on render (make customizable)
-           (conj comments (when can-add? (new-comment opts))))]))
+           (conj comments (when can-post? (new-comment opts))))]))
