@@ -347,7 +347,8 @@
       (if editing?
         [render-editor (assoc opts :!state !state) c]
         [:<>
-         [:div {:data-arb-comment-content true}
+         [:div {:data-arb-comment-content true
+                :on-double-click #(when (can-edit? c) (swap! !state assoc :editing? true))}
           (when body
             (parse body #js {:replace
                              (fn [^js dom-node]
