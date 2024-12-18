@@ -218,7 +218,8 @@
     [:arb.comment/created-at :as :created-at]
     [:arb.comment/body :as :body]
     ;; TODO: allow to customize user attrs
-    {[:arb.comment/author :as :author] [[:user/name :as :name]]}
+    {[:arb.comment/author :as :author] [lookup-attribute
+                                        [:user/name :as :name]]}
     {[:arb.comment/_pertains-to :as :comments] '...}]})
 
 (defn present-comment [entity]
