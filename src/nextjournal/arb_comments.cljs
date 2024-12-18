@@ -349,9 +349,13 @@
         [:<>
          [:div {:data-arb-comment-content true}
           (when body
-            (parse body #js {:replace (fn [^js dom-node]
-                                        (when-let [id (j/get-in dom-node [:attribs "data-arb-link-id"])]
-                                          (r/as-element [render-link opts {:id id}])))}))]])]
+            (parse body #js {:replace
+                             (fn [^js dom-node]
+                               (or
+                                (when-let [id (j/get-in dom-node [:attribs "data-arb-link-id"])]
+                                  (r/as-element [render-link opts {:id id}]))
+                                (when (= "checkbox" (j/get-in dom-node [:attribs :type]))
+                                  (j/assoc-in! dom-node [:attribs :disabled] true))))}))]])]
      (into [:<>]
            (map (fn [child-comment]
                   ^{:key (str (:id child-comment) "-" (:editing? child-comment))}
