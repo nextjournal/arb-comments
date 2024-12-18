@@ -321,12 +321,12 @@
      [:div {:data-arb-comment-main true}
       [:div.flex.justify-between {:data-arb-comment-meta true}
        [:div
+        [:span {:data-arb-comment-author true}
+         [:a {:href (:url author)} (or (:name author) (:email author))]]
         (when created-at
           [:span {:data-arb-comment-date true}
-           (cond-> created-at format-datetime format-datetime)
-           " • "])
-        [:span {:data-arb-comment-author true}
-         [:a {:href (:url author)} (:name author)]]]
+           " • "
+           (cond-> created-at format-datetime format-datetime)])]
 
        (when-not editing?
          [:div.flex.gap-4
@@ -366,7 +366,8 @@
            (cond-> comments
              reply (conj reply)))]))
 
-(defn render-tree [{:as opts :keys [pertains-to can-post?]} comments]
+(defn render-tree [{:as opts :keys [pertains-to can-post?]
+                    :or {can-post? true}} comments]
   (let [opts (merge {:button (partial vector :button)
                      :link (partial vector :button)}
                     opts)]
