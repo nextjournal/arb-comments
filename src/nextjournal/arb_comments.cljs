@@ -309,7 +309,7 @@
    :editing? true
    :author author})
 
-(defn render-comment [{:as opts :keys [format-datetime on-delete lookup-attribute link can-post? can-edit? can-delete?]
+(defn render-comment [{:as opts :keys [format-datetime on-delete lookup-attribute link button can-post? can-edit? can-delete?]
                        :or {can-edit? (constantly true)
                             can-delete? (constantly true)
                             can-post? true}}
@@ -328,22 +328,25 @@
            " • "
            (cond-> created-at format-datetime format-datetime)])]
 
-       (when-not editing?
-         [:div.flex.gap-4
-          {:data-arb-comment-actions true
-           :class "text-[13px] opacity-70"}
-          (when (can-delete? c)
-            [link {:variant :destructive-hover
-                   :on-click #(on-delete c)}
-             "Delete"])
-          (when (can-edit? c)
-            [link {:variant :secondary
-                   :on-click #(swap! !state update :editing? not)}
-             "Edit"])
-          (when can-post?
-            [link {:variant :primary-hover
+       [:div.flex.gap-4
+        {:data-arb-comment-actions true
+         :data-arb-comment-editing (or editing? reply)
+         :class "text-[13px]"}
+        (when (can-delete? c)
+          [:span.opacity-70
+           [link {:variant :destructive-hover
+                  :on-click #(on-delete c)}
+            "Delete"]])
+        (when (can-edit? c)
+          [:span.opacity-70
+           [link {:variant :secondary
+                  :on-click #(swap! !state update :editing? not)}
+            "Edit"]])
+        (when can-post?
+          [button {:variant :primary
+                   :class "float-right"
                    :on-click #(swap! !state assoc :reply (new-comment opts))}
-             "Reply"])])]
+           "Reply"])]]
       (if editing?
         [render-editor (assoc opts :!state !state) c]
         [:<>

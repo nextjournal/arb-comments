@@ -54,6 +54,11 @@
   visibility: visible;
 }
 
+[data-arb-comment-actions][data-arb-comment-editing],
+[data-arb-comment-main]:hover [data-arb-comment-actions][data-arb-comment-editing] {
+  visibility: hidden;
+}
+
 [data-arb-comment-actions] {
   visibility: hidden;
   font-size: 14px;
