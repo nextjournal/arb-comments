@@ -91,8 +91,8 @@
     (.command props #js {:id link-id})))
 
 (defn arb-link-dropdown-menu [{:keys [fetch-link-types fetch-link-suggestions]} editor !state]
-  (let [{:as state :keys [props types type suggestions open?]} @!state
         rect (.clientRect props)]
+  (let [{:as state :keys [props types type suggestions open? query focused-index]} @!state
     (hooks/use-effect
      (fn []
        (when-not (or types type)
@@ -106,9 +106,9 @@
     (hooks/use-effect
      (fn []
        (when type
-         (.. (fetch-link-suggestions type)
+         (.. (fetch-link-suggestions {:arb.comment.link/type type :query query})
              (then (fn [suggestions] (swap! !state assoc :suggestions suggestions)))
-             (catch (fn [e] (js/console.error e)))))) [type])
+             (catch (fn [e] (js/console.error e)))))) [type query])
     (when (and rect (or types suggestions))
       [:> DropdownMenu/Root {:default-open true
                              :open open?
@@ -124,18 +124,30 @@
                        :height (.-height rect)}}]]
        [:> DropdownMenu/Portal
         [:> DropdownMenu/Content {:data-dropdown-menu-content "DropdownMenuContent"}
+         [:input {:type :text
+                  :auto-focus true
+                  :value query
+                  :on-change (fn [^js e] (swap! !state assoc :query (.. e -target -value)))}]
+
          (if suggestions
            (into [:<>]
-                 (map (fn [{:as completion-data :keys [label]}]
-                        [:> DropdownMenu/Item {:data-dropdown-menu-item "DropdownMenuItem"
-                                               :on-select #(on-link-select state completion-data)} label]))
+                 (map-indexed
+                  (fn [i {:as completion-data :keys [label]}]
+                    [:div {:data-dropdown-menu-item "DropdownMenuItem"
+                           :data-focused (= i focused-index)
+                           :on-pointer-enter (fn [] (swap! !state assoc :focused-index focused-index))
+                           :on-click #(on-link-select state completion-data)} label]))
                  suggestions)
            (into [:<>]
-                 (map (fn [{:keys [label type]}]
-                        [:> DropdownMenu/Item {:data-dropdown-menu-item "DropdownMenuItem"
-                                               :on-select #(do
-                                                             (.preventDefault %)
-                                                             (swap! !state assoc :type type))} label]))
+                 (map-indexed
+                  (fn [i {:keys [label type]}]
+                    [:div {:data-dropdown-menu-item "DropdownMenuItem"
+                           :focused (= i focused-index)
+                           :data-focused (= i focused-index)
+                           :on-pointer-enter (fn [] (swap! !state assoc :focused-index focused-index))
+                           :on-click #(do
+                                        (.preventDefault %)
+                                        (swap! !state assoc :type type))} label]))
                  types))
          [:> DropdownMenu/Arrow {:data-dropdown-menu-arrow true}]]]])))
 
@@ -343,7 +355,7 @@
                   :on-click #(swap! !state update :editing? not)}
             "Edit"]])
         (when can-post?
-          [button {:variant :primary
+          [button {:variant :secondary
                    :class "float-right"
                    :on-click #(swap! !state assoc :reply (new-comment opts))}
            "Reply"])]]

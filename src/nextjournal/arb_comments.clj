@@ -261,10 +261,10 @@
 
 (defmulti link-suggestions
   "Given `request` and `type` returns a collection of candidates (entities) for a link's target."
-  (fn [request type] type))
+  (fn [request {:arb.comment.link/keys [type]}] type))
 
-(defmethod link-suggestions :default [_ type]
-  (throw (IllegalArgumentException. (format "Multimethod `link-suggestions` not implemented for type: '%s'" type))))
+(defmethod link-suggestions :default [_ {:arb.comment.link/keys [type]}]
+  (throw (IllegalArgumentException. (format "Multimethod `link-suggestions` not implemented for :arb.comment.link/type '%s'" type))))
 
 (defn present-link [{:as link :arb.comment.link/keys [type]}]
   (assoc (present-link-target link)
