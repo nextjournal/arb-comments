@@ -331,7 +331,8 @@
         {:keys [editing? reply]} @!state]
     [:div {:data-arb-comment true}
      [:div {:data-arb-comment-main true}
-      [:div.flex.justify-between {:data-arb-comment-meta true}
+      [:div.flex.justify-between {:class "mt-[-9px]" ; compensate reply button height
+                                  :data-arb-comment-meta true}
        [:div
         [:span {:data-arb-comment-author true}
          [:a {:href (:url author)} (or (:name author) (:email author))]]
