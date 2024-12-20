@@ -90,9 +90,45 @@
     (swap! !link-data-store assoc link-id (assoc completion-data :id link-id))
     (.command props #js {:id link-id})))
 
-(defn arb-link-dropdown-menu [{:keys [fetch-link-types fetch-link-suggestions]} editor !state]
-        rect (.clientRect props)]
-  (let [{:as state :keys [props types type suggestions open? query focused-index]} @!state
+(defn arb-link-dropdown-menu [{:keys [fetch-link-types fetch-link-suggestions input]} editor !state]
+  (let [{:as state :keys [props types type suggestions open? query focused-index ^js query-input-ref]} @!state
+        focused-index (or focused-index 0)
+        query-pattern (when (seq query) (re-pattern (str "(?i)" query)))
+        items (->> (or suggestions types)
+                   (filter (fn [{:keys [label]}]
+                             (if query-pattern
+                               (re-find query-pattern label)
+                               true))))
+        rect (.clientRect props)
+        on-select (fn [i ^js e]
+                    (cond
+                      (and (not type) (seq types)) (do (.preventDefault e)
+                                                       (swap! !state assoc
+                                                              :type (:type (nth items i))
+                                                              :query ""
+                                                              :focused-index 0)
+                                                       (.focus query-input-ref))
+                      (seq suggestions) (do (on-link-select state (nth items i))
+                                            (reset! !state nil))))
+        on-key-down (fn [^js e]
+                      (let [k (fn [] (.-preventDefault e) (.-stopPropagation e))]
+                        (cond
+                          (= "ArrowDown" (.-code e))
+                          (do (k)
+                              (when (< focused-index (dec (count items)))
+                                (swap! !state update :focused-index inc)))
+
+
+                          (= "ArrowUp" (.-code e))
+                          (do (k)
+                              (when (pos? focused-index)
+                                (swap! !state update :focused-index dec)))
+
+                          (= "Enter" (.-code e))
+                          (on-select focused-index e))))]
+    (hooks/use-effect #(when (<= (count items) focused-index)
+                         (swap! !state assoc :focused-index 0))
+                      [items focused-index on-select])
     (hooks/use-effect
      (fn []
        (when-not (or types type)
@@ -109,6 +145,11 @@
          (.. (fetch-link-suggestions {:arb.comment.link/type type :query query})
              (then (fn [suggestions] (swap! !state assoc :suggestions suggestions)))
              (catch (fn [e] (js/console.error e)))))) [type query])
+    (hooks/use-effect
+     (fn []
+       (js/addEventListener "keydown" on-key-down)
+       #(do (js/removeEventListener "keydown" on-key-down)))
+     [type focused-index items])
     (when (and rect (or types suggestions))
       [:> DropdownMenu/Root {:default-open true
                              :open open?
@@ -124,32 +165,24 @@
                        :height (.-height rect)}}]]
        [:> DropdownMenu/Portal
         [:> DropdownMenu/Content {:data-dropdown-menu-content "DropdownMenuContent"}
-         [:input {:type :text
-                  :auto-focus true
-                  :value query
-                  :on-change (fn [^js e] (swap! !state assoc :query (.. e -target -value)))}]
-
-         (if suggestions
-           (into [:<>]
-                 (map-indexed
-                  (fn [i {:as completion-data :keys [label]}]
-                    [:div {:data-dropdown-menu-item "DropdownMenuItem"
-                           :data-focused (= i focused-index)
-                           :on-pointer-enter (fn [] (swap! !state assoc :focused-index focused-index))
-                           :on-click #(on-link-select state completion-data)} label]))
-                 suggestions)
-           (into [:<>]
-                 (map-indexed
-                  (fn [i {:keys [label type]}]
-                    [:div {:data-dropdown-menu-item "DropdownMenuItem"
-                           :focused (= i focused-index)
-                           :data-focused (= i focused-index)
-                           :on-pointer-enter (fn [] (swap! !state assoc :focused-index focused-index))
-                           :on-click #(do
-                                        (.preventDefault %)
-                                        (swap! !state assoc :type type))} label]))
-                 types))
-         [:> DropdownMenu/Arrow {:data-dropdown-menu-arrow true}]]]])))
+         [input {:type :text
+                 :variant :flex
+                 :class "mb-1"
+                 :size 2
+                 :auto-focus true
+                 :ref (partial swap! !state assoc :query-input-ref)
+                 :value query
+                 :on-change (fn [^js e] (swap! !state assoc :query (.. e -target -value)))}]
+         (->> items
+              (map-indexed
+               (fn [i {:keys [label]}]
+                 [:div
+                  {:data-dropdown-menu-item "DropdownMenuItem"
+                   :class ["data-[highlighted]:bg-violet9" "data-[highlighted]:text-violet1"]
+                   :data-highlighted (if (= i focused-index) true nil)
+                   :on-pointer-enter (fn [] (swap! !state assoc :focused-index i))
+                   :on-click (partial on-select i)} label]))
+              (into [:<>]))]]])))
 
 (defn link-editor [{:keys [editor !menu-state button]}]
   (let [focus-editor! #(js/setTimeout (fn [] (.. editor -commands focus))) ;; need to be deferred in event queue to avoid race with popover focus
@@ -385,7 +418,8 @@
 (defn render-tree [{:as opts :keys [pertains-to can-post?]
                     :or {can-post? true}} comments]
   (let [opts (merge {:button (partial vector :button)
-                     :link (partial vector :button)}
+                     :link (partial vector :button)
+                     :input (partial vector :input)}
                     opts)]
     [:div {:data-arb-comments true}
      (into [:<>]
