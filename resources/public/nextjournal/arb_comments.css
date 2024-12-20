@@ -297,7 +297,7 @@ button {
 /* Dropdown Menu */
 
 [data-dropdown-menu-content] {
-  min-width: 220px;
+  width: 300px;
   max-height: 400px;
   overflow-y: auto;
   background-color: white;

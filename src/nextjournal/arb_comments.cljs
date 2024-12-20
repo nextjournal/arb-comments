@@ -97,7 +97,7 @@
         items (->> (or suggestions types)
                    (filter (fn [{:keys [label]}]
                              (if query-pattern
-                               (re-find query-pattern label)
+                               (re-find query-pattern (str label))
                                true))))
         rect (.clientRect props)
         on-select (fn [i ^js e]
